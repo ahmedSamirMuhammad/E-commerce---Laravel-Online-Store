@@ -1,10 +1,12 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\API;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Product;
-use App\Models\Category;
+use App\Http\Resources\ProductResource;
+use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
@@ -13,20 +15,8 @@ class ProductController extends Controller
      */
     public function index()
     {
-
-        // $products = Product::all();
         $products = Product::paginate(3);
-        return view('products.index', ['products' => $products]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-
-        $categories = Category::all();
-        return view('products.create', compact('categories'));
+        return ProductResource::collection($products);
     }
 
     /**
@@ -34,6 +24,7 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        $data = $request->all();
 
         $rules = [
             "title" => "required | min:2",
@@ -42,6 +33,7 @@ class ProductController extends Controller
             "image_url" => "required",
             "category_id" => "required",
         ];
+
         $message = [
             "title.required" => "Title field is required",
             "title.min" => "Title input must have more than 1 character",
@@ -51,67 +43,39 @@ class ProductController extends Controller
             "image_url.required" => "Image field is required",
             "category_id.required" => "Category field is required",
         ];
-        $data = $request->validate($rules, $message);
+
+        $validator = Validator::make($data, $rules, $message);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        };
 
         //get the "ID" of currently authenticated user and assign it to the "product_creator_id"
         $data['creator_id'] = auth()->id();
 
-        Product::create($data);
+        $product = Product::create($data);
 
-        return redirect()->route('products.index');
+        return new ProductResource($product);
     }
-
 
     /**
      * Display the specified resource.
      */
     public function show(string $id)
     {
-        // $product = Product::findOrFail($id);
-        // return view('products.show', ["product"=>$product]);
-
-
-        $product = Product::findOrFail($id);
-        $category = $product->category;
-
-        return view('products.show', compact("product", "category"));
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
         $product = Product::findOrFail($id);
 
-        //get the currently authenticated user and assign it to the "user"
-        // $user = auth()->user();
+        $product->load('category');
 
-        // if ($user->id != $product->creator_id  && $user->role != "admin") {
-        //     abort(403, 'Unauthorized action.');
-        // }
-
-        $this->authorize('update', $product);
-
-        $categories = Category::all();
-
-        return view('products.edit', compact('product', 'categories'));
+        return new ProductResource($product);
     }
-
 
     /**
      * Update the specified resource in storage.
      */
     public function update(Request $request, string $id)
     {
-        //get the currently authenticated user and assign it to the "user"
-        // $user = auth()->user();
-
-        // if ($user->id != $product->creator_id  && $user->role != "admin") {
-        //     abort(403, 'Unauthorized action.');
-        // }
-
-        $product = Product::where("id", $id)->first();
+        $product = Product::where('id', $id)->first();
 
         $rules = [
             "title" => "required | min:2",
@@ -120,6 +84,7 @@ class ProductController extends Controller
             "image_url" => "required",
             "category_id" => "required"
         ];
+
         $message = [
             "title.required" => "Title field is required",
             "title.min" => "Title input must have more than 1 character",
@@ -130,15 +95,20 @@ class ProductController extends Controller
             "category_id.required" => "Category field is required",
         ];
 
-        $data = $request->validate($rules, $message);
+        $data = $request->all();
 
-        //check if the currently authenticated user have permissions for the "update" action 
+        $validator = Validator::make($data, $rules, $message);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Check if the currently authenticated user has permissions for the "update" action
         $this->authorize('update', $product);
 
         $product->update($data);
 
-
-        return redirect()->route('products.index');
+        return new ProductResource($product);
     }
 
     /**
@@ -146,19 +116,10 @@ class ProductController extends Controller
      */
     public function destroy(string $id)
     {
-        //get the currently authenticated user and assign it to the "user"
-        // $user = auth()->user();
-
-        // if ($user->id != $product->creator_id  && $user->role != "admin") {
-        //     abort(403, 'Unauthorized action.');
-        // }
         $product = Product::findOrFail($id);
-
-        //check if the currently authenticated user have permissions for the "delete" action 
-        $this->authorize('delete', $product);
 
         $product->delete();
 
-        return redirect()->route('products.index');
+        return response()->json(null, 204);
     }
 }

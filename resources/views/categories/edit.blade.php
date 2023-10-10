@@ -27,18 +27,25 @@
                                 <label for="name">Name</label>
                                 <input type="text" required maxlength="50" class="form-control" id="name" name="name"
                                     value="{{ $category->name }}">
+                                @error('name')
+                                <div class="text-danger mt-2">{{$message}}</div>
+                                @enderror
                             </div>
                             <div class="col">
                                 <label for="logo">Logo</label>
                                 <input type="file" required maxlength="50" class="form-control" id="logo" name="logo">
+
+                                @error('name')
+                                <div class="text-danger mt-2">{{$message}}</div>
+                                @enderror
+
                                 @if ($category->logo)
                                 <div class="mt-3">
                                     <img src="{{ asset('assets/images/' . $category->logo) }}" alt="Existing logo"
                                         width="100">
                                 </div>
-                                @else
-                                <span></span>
                                 @endif
+
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary px-4 btn-lg">Submit</button>

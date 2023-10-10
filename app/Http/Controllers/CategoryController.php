@@ -42,7 +42,22 @@ class CategoryController extends Controller
 
         $image->move(public_path('assets/images'), $imageName);
 
-        $data = $request->all();
+
+        $rules = [
+            "id" => "required | numeric",
+            "name" => "required | string",
+            "logo" => "required | image",
+        ];
+        $message = [
+            "id.required" => "ID field is required",
+            "id.numeric" => "ID input must have numbers only",
+            "name.required" => "Name field is required",
+            "name.string" => "Name input must have letters",
+            "logo.required" => "Logo field is required",
+            "logo.image" => "Logo must be an image file",
+        ];
+
+        $data = $request->validate($rules, $message);
 
         $data['logo'] = $imageName;
 
@@ -75,7 +90,19 @@ class CategoryController extends Controller
      */
     public function update(Request $request, Category $category)
     {
-        $data = $request->all();
+        $rules = [
+            'name' => 'required|string',
+            "logo" => "required | image",
+        ];
+
+        $messages = [
+            "name.required" => "Name field is required",
+            "name.string" => "Name input must have letters",
+            "logo.required" => "Logo field is required",
+            "logo.image" => "Logo must be an image file",
+        ];
+
+        $data = $request->validate($rules, $messages);
 
         if ($request->hasFile('logo')) {
 
@@ -86,6 +113,10 @@ class CategoryController extends Controller
             $image->move(public_path('assets/images'), $imageName);
 
             $data['logo'] = $imageName;
+        } else {
+
+            // If no new logo file is uploaded, get the existing logo value
+            $data['logo'] = $category->logo;
         }
 
         $category->update($data);
